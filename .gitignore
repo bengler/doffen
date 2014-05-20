@@ -1,0 +1,15 @@
+*.seed
+*.log
+*.dat
+*.out
+*.pid
+*.gz
+
+.DS_Store
+
+logs
+node_modules
+npm-debug.log
+data/*
+
+*.sublime-workspace

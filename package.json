@@ -1,0 +1,24 @@
+{
+  "name": "doffen",
+  "version": "0.0.0",
+  "description": "Seeing what we can get out of the doffin data dump",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "opendata"
+  ],
+  "author": "Even Westvang",
+  "license": "MIT",
+  "devDependencies": {
+    "execSync": "~1.0.1-pre",
+    "glob": "~3.2.9",
+    "node-expat": "~2.2.0",
+    "xml2json": "~0.4.0",
+    "prettyjson": "~1.0.0",
+    "clear": "0.0.1",
+    // "lodash": "~2.4.1",
+    "worker-farm": "~0.3.1"
+  }
+}
