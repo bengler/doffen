@@ -3,10 +3,9 @@
 var fs = require("fs");
 var glob = require("glob");
 var utils = require("./utils");
-var DB = require("./dbConnection");
+var db = require("./dbConnection");
 
-var THREAD_COUNT = 8;
-
+var THREAD_COUNT = 1;
 
 
 function Parser() {
@@ -30,15 +29,13 @@ function Parser() {
   console.info("With lengths:" + lengths + "\n\n");
   console.info("Starting workers…");
 
-  db = new DB("test");
   db.scrub();
 
   this.workerFarm = require('worker-farm');
   this.workers = this.workerFarm(require.resolve('./parserWorker'));
   this.returnedWorkers = 0;
-  // this.runWorkers();
+  this.runWorkers();
 }
-
 
 Parser.prototype.runWorkers = function() {
   for (var i = 0; i < THREAD_COUNT; i++) {
@@ -52,6 +49,7 @@ Parser.prototype.handleWorkerDone = function(err, workerCounts, workerResult) {
   if (++this.returnedWorkers == THREAD_COUNT) {
     this.workerFarm.end(this.workers);
     this.report();
+    this.db.close();
   }
 };
 
