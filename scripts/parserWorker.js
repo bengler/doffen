@@ -13,7 +13,7 @@ function ParserWorker(files, options, callback) {
   this.callback = callback;
 
   this.result = {};
-  this.metaCounts = {skipped_additional_info: 0, skipped_ted_wtfs: 0};
+  this.counts = {skipped_additional_info: 0, skipped_ted_wtfs: 0};
 
   this.currentReads = 0;
   this.progressDisplayInterval = 0;
@@ -21,10 +21,11 @@ function ParserWorker(files, options, callback) {
   this.feedFiles();
 }
 
+
 ParserWorker.prototype.feedFiles = function() {
   if (this.currentReads === 0 && this.files.length === 0) {
     console.info("Done.");
-    this.callback(null, this.metaCounts, this.result);
+    this.callback(null, this.counts, this.result);
     return;
   }
 
@@ -38,20 +39,23 @@ ParserWorker.prototype.feedFiles = function() {
   setTimeout(this.feedFiles.bind(this), 100);
 };
 
+
 ParserWorker.prototype.handleFileRead = function(err, data) {
   this.currentReads -= 1;
   json = this.parse(data);
 
   for (var key in json) break;
-  this.metaCounts[key] = (typeof this.metaCounts[key] === 'undefined' ? 1 : this.metaCounts[key] += 1);
+  this.counts[key] = (typeof this.counts[key] === 'undefined' ? 1 : this.counts[key] += 1);
 
   this.logSample();
 };
+
 
 ParserWorker.prototype.parse = function(data) {
   var jsonString = parser.toJson(data);
   return JSON.parse(jsonString);
 };
+
 
 ParserWorker.prototype.logSample = function() {
   this.progressDisplayInterval += 1;
@@ -63,12 +67,12 @@ ParserWorker.prototype.logSample = function() {
 };
 
   // if (data.indexOf("ADDITIONAL_INFORMATION_CORRIGENDUM") > 0) {
-  //   metaCounts.skipped_additional_info += 1;
+  //   counts.skipped_additional_info += 1;
   //   return;
   // }
 
   // if (data.indexOf("TED_ESENDERS") > 0) {
-  //   metaCounts.skipped_ted_wtfs += 1;
+  //   counts.skipped_ted_wtfs += 1;
   //   return;
   // }
 

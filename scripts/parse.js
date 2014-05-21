@@ -1,53 +1,74 @@
 #!/usr/bin/env node
 
-var THREADS = 8;
+var fs = require("fs");
+var glob = require("glob");
+var utils = require("./utils");
+var DB = require("./dbConnection");
 
-var fs = require('fs');
-var glob = require('glob');
-var utils = require('./utils');
-
-var workerFarm = require('worker-farm'),
-  workers    = workerFarm(require.resolve('./parserWorker')),
-  ret        = 0;
-
-var result = {};
-var metaCounts = {};
+var THREAD_COUNT = 8;
 
 
-console.info("Reading files.");
-files = glob.sync('data/extracted/*/*.xml');
-console.info("Files found: " + files.length);
 
-files = files.slice(0,9990);
+function Parser() {
+  this.result = {};
+  this.counts = {};
 
-console.info("Splitting into " + THREADS + " chunks for moar parallelism.");
-chunks = utils.group(files, THREADS);
+  console.info("Reading files.");
 
-lengths = chunks.map(function(e) {
-  return e.length;
-});
-console.info("With lengths:" + lengths);
+  var files = glob.sync('data/extracted/*/*.xml');
 
-console.info("Starting workers.");
+  console.info("Files found: " + files.length);
 
-function summarize(workerCounts) {
-  console.info(workerCounts);
-  Object.keys(workerCounts).map(function(key) {
-    metaCounts[key] = (typeof metaCounts[key] === 'undefined' ? workerCounts[key] : metaCounts[key] += workerCounts[key]);
+  files = files.slice(0,9990);
+
+  console.info("Splitting into " + THREAD_COUNT + " chunks for moar parallelism.");
+  chunks = utils.group(files, THREAD_COUNT);
+  lengths = chunks.map(function(e) {
+    return e.length;
   });
+
+  console.info("With lengths:" + lengths + "\n\n");
+  console.info("Starting workers…");
+
+  db = new DB("test");
+  db.scrub();
+
+  this.workerFarm = require('worker-farm');
+  this.workers = this.workerFarm(require.resolve('./parserWorker'));
+  this.returnedWorkers = 0;
+  // this.runWorkers();
 }
 
-function report() {
-  console.info(metaCounts);
-}
 
-for (var i = 0; i < THREADS; i++) {
-  workers(chunks[i], {display: i === 0, workerNr: i}, function (err, workerCounts, res) {
-    summarize(workerCounts);
-    if (++ret == THREADS) {
-      workerFarm.end(workers);
-      report();
+Parser.prototype.runWorkers = function() {
+  for (var i = 0; i < THREAD_COUNT; i++) {
+    this.workers(chunks[i], {display: i === 0, workerNr: i}, this.handleWorkerDone.bind(this));
+  }
+};
+
+
+Parser.prototype.handleWorkerDone = function(err, workerCounts, workerResult) {
+  this.summarize(workerCounts);
+  if (++this.returnedWorkers == THREAD_COUNT) {
+    this.workerFarm.end(this.workers);
+    this.report();
+  }
+};
+
+
+Parser.prototype.summarize = function(workerCounts) {
+  Object.keys(workerCounts).map(function(key) {
+    if (typeof this.counts[key] === 'undefined') {
+      this.counts[key] = workerCounts[key];
+    } else {
+      this.counts[key] += workerCounts[key];
     }
-  })
-}
+  }.bind(this));
+};
 
+
+Parser.prototype.report = function() {
+  console.info(this.counts);
+};
+
+new Parser();
