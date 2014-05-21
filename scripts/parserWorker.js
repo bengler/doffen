@@ -4,6 +4,7 @@ var parser = require('xml2json');
 var fs = require('fs');
 var db = require("./dbConnection");
 
+
 function ParserWorker(files, options, callback) {
   console.info("Spun up worker #" + options.workerNr);
 

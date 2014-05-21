@@ -27,17 +27,20 @@ function Parser() {
   });
 
   console.info("With lengths:" + lengths + "\n\n");
-  console.info("Starting workers…");
 
-  db.scrub();
+  var scrubPromise = db.scrub();
+  console.info(scrubPromise);
 
   this.workerFarm = require('worker-farm');
   this.workers = this.workerFarm(require.resolve('./parserWorker'));
   this.returnedWorkers = 0;
-  this.runWorkers();
+
+  console.info("Waiting for DB.");
+  scrubPromise.then(this.runWorkers.bind(this));
 }
 
 Parser.prototype.runWorkers = function() {
+  console.info("Starting workers…");
   for (var i = 0; i < THREAD_COUNT; i++) {
     this.workers(chunks[i], {display: i === 0, workerNr: i}, this.handleWorkerDone.bind(this));
   }
@@ -49,7 +52,7 @@ Parser.prototype.handleWorkerDone = function(err, workerCounts, workerResult) {
   if (++this.returnedWorkers == THREAD_COUNT) {
     this.workerFarm.end(this.workers);
     this.report();
-    this.db.close();
+    db.close();
   }
 };
 
