@@ -27,9 +27,11 @@ function ParserWorker(files, options, callback) {
 
 ParserWorker.prototype.feedFiles = function() {
   if (this.currentReads === 0 && this.files.length === 0) {
-    console.info("Done.");
     this.db.flush();
-    this.callback(null, this.counts, this.result);
+    this.db.close(function() {
+      console.info("Closed");
+      this.callback(null, this.counts, this.result);
+    }.bind(this));
     return;
   }
 

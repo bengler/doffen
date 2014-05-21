@@ -63,7 +63,7 @@ DbConnection.prototype.scrub = function() {
 DbConnection.prototype.flush = function() {
   this.connectionPromise.then(function (conn) {
 
-    r.db(DB_NAME).table(DB_TABLE_NAME).insert(this.queue, {durability: "soft", returnVals: false}).run(conn, this.handleError.bind(this));
+    r.db(DB_NAME).table(DB_TABLE_NAME).insert(this.queue, {durability: "hard", returnVals: false}).run(conn, this.handleError.bind(this));
     this.queue = [];
 
   }.bind(this));

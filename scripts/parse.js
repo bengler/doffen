@@ -5,7 +5,7 @@ var glob = require("glob");
 var utils = require("./utils");
 var DB = require("./dbConnection");
 
-var THREAD_COUNT = 7;
+var THREAD_COUNT = 8;
 
 function Parser() {
   this.result = {};
@@ -16,6 +16,8 @@ function Parser() {
   var files = glob.sync('data/extracted/*/*.xml');
 
   console.info("Files found: " + files.length);
+
+  files = files.slice(0,10000);
 
   console.info("Splitting into " + THREAD_COUNT + " chunks for moar parallelism.");
   chunks = utils.group(files, THREAD_COUNT);
@@ -32,7 +34,7 @@ function Parser() {
   this.workers = this.workerFarm(require.resolve('./parserWorker'));
   this.returnedWorkers = 0;
 
-  console.info("Waiting for DB.");
+  console.info("Waiting for DB");
   scrubPromise.then(this.runWorkers.bind(this));
 }
 
@@ -46,6 +48,7 @@ Parser.prototype.runWorkers = function() {
 Parser.prototype.handleWorkerDone = function(err, workerCounts, workerResult) {
   this.summarize(workerCounts);
   if (++this.returnedWorkers == THREAD_COUNT) {
+    console.info("All done.")
     this.workerFarm.end(this.workers);
     this.report();
     this.db.close();
