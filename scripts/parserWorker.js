@@ -1,24 +1,66 @@
-
-var CONCURRENT_READS = 180;
-
 var prettyjson = require('prettyjson');
 var clear = require('clear');
 var parser = require('xml2json');
 var fs = require('fs');
 
-var files = [];
-var display = false;
-var callBack = null;
+function ParserWorker(files, options, callback) {
+  console.info("Spun up worker #" + options.workerNr);
 
-var currentReads = 0;
-var progressDisplayInterval = 0;
+  this.CONCURRENT_READS = 180;
 
-var result = {};
-var metaCounts = {skipped_additional_info: 0, skipped_ted_wtfs: 0};
+  this.display = options.display;
+  this.files = files;
+  this.callback = callback;
 
+  this.result = {};
+  this.metaCounts = {skipped_additional_info: 0, skipped_ted_wtfs: 0};
 
-function parse(err, data) {
-  currentReads -= 1;
+  this.currentReads = 0;
+  this.progressDisplayInterval = 0;
+
+  this.feedFiles();
+}
+
+ParserWorker.prototype.feedFiles = function() {
+  if (this.currentReads === 0 && this.files.length === 0) {
+    console.info("Done.");
+    this.callback(null, this.metaCounts, this.result);
+    return;
+  }
+
+  if (this.files.length > 0) {
+    while (this.currentReads < this.CONCURRENT_READS && this.files.length > 0) {
+      var fileName = this.files.pop();
+      fs.readFile(fileName, {encoding: "utf-8" }, this.handleFileRead.bind(this));
+      this.currentReads += 1;
+    }
+  }
+  setTimeout(this.feedFiles.bind(this), 100);
+};
+
+ParserWorker.prototype.handleFileRead = function(err, data) {
+  this.currentReads -= 1;
+  json = this.parse(data);
+
+  for (var key in json) break;
+  this.metaCounts[key] = (typeof this.metaCounts[key] === 'undefined' ? 1 : this.metaCounts[key] += 1);
+
+  this.logSample();
+};
+
+ParserWorker.prototype.parse = function(data) {
+  var jsonString = parser.toJson(data);
+  return JSON.parse(jsonString);
+};
+
+ParserWorker.prototype.logSample = function() {
+  this.progressDisplayInterval += 1;
+  if (this.display && this.progressDisplayInterval % 100 === 0) {
+    clear();
+    console.log(this.files.length);
+    console.log(prettyjson.render(json));
+  }
+};
 
   // if (data.indexOf("ADDITIONAL_INFORMATION_CORRIGENDUM") > 0) {
   //   metaCounts.skipped_additional_info += 1;
@@ -30,49 +72,7 @@ function parse(err, data) {
   //   return;
   // }
 
-  var jsonString = parser.toJson(data);
-  json = JSON.parse(jsonString);
 
-  for (var key in json) break;
-  metaCounts[key] = (typeof metaCounts[key] === 'undefined' ? 1 : metaCounts[key] += 1);
-
-  progressDisplayInterval += 1;
-
-  if (display && progressDisplayInterval % 100 === 0) {
-    clear();
-    console.log(files.length);
-    console.log(prettyjson.render(json));
-  }
+module.exports = function(files, options, callback) {
+  return new ParserWorker(files, options, callback);
 };
-
-
-function feedFiles() {
-  if (currentReads === 0 && files.length === 0) {
-    console.info("Done.");
-    callback(null, metaCounts, result);
-    return;
-  }
-
-  if (files.length > 0) {
-    while (currentReads < CONCURRENT_READS && files.length > 0) {
-      var fileName = files.pop();
-      fs.readFile(fileName, {encoding: "utf-8" }, parse);
-      currentReads += 1;
-    }
-  }
-
-  setTimeout(function() {
-    feedFiles();
-  }, 50);
-};
-
-function init(_files, options, _callback) {
-  files = _files;
-  display = options.display;
-  callback = _callback;
-  console.info("Spun up worker #" + options.workerNr);
-  feedFiles();
-};
-
-module.exports = init;
-

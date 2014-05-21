@@ -18,16 +18,17 @@ console.info("Reading files.");
 files = glob.sync('data/extracted/*/*.xml');
 console.info("Files found: " + files.length);
 
-// files = files.slice(0,9990);
+files = files.slice(0,9990);
 
 console.info("Splitting into " + THREADS + " chunks for moar parallelism.");
 chunks = utils.group(files, THREADS);
-console.info("Done.");
 
-// lengths = chunks.map(function(e) {
-//   return e.length;
-// });
-// console.info(lengths);
+lengths = chunks.map(function(e) {
+  return e.length;
+});
+console.info("With lengths:" + lengths);
+
+console.info("Starting workers.");
 
 function summarize(workerCounts) {
   console.info(workerCounts);
