@@ -2,7 +2,7 @@ var prettyjson = require('prettyjson');
 var clear = require('clear');
 var parser = require('xml2json');
 var fs = require('fs');
-var db = require("./dbConnection");
+var DB = require("./dbConnection");
 
 
 function ParserWorker(files, options, callback) {
@@ -20,6 +20,7 @@ function ParserWorker(files, options, callback) {
   this.currentReads = 0;
   this.progressDisplayInterval = 0;
 
+  this.db = new DB();
   this.feedFiles();
 }
 
@@ -27,6 +28,7 @@ function ParserWorker(files, options, callback) {
 ParserWorker.prototype.feedFiles = function() {
   if (this.currentReads === 0 && this.files.length === 0) {
     console.info("Done.");
+    this.db.flush();
     this.callback(null, this.counts, this.result);
     return;
   }
@@ -46,12 +48,12 @@ ParserWorker.prototype.handleFileRead = function(err, data) {
   this.currentReads -= 1;
   json = this.parse(data);
 
-  db.insert(json);
+  this.db.insert(json);
 
   for (var key in json) break;
   this.counts[key] = (typeof this.counts[key] === 'undefined' ? 1 : this.counts[key] += 1);
 
-  this.logSample();
+  // this.logSample();
 };
 
 

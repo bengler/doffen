@@ -3,10 +3,9 @@
 var fs = require("fs");
 var glob = require("glob");
 var utils = require("./utils");
-var db = require("./dbConnection");
+var DB = require("./dbConnection");
 
-var THREAD_COUNT = 1;
-
+var THREAD_COUNT = 7;
 
 function Parser() {
   this.result = {};
@@ -18,8 +17,6 @@ function Parser() {
 
   console.info("Files found: " + files.length);
 
-  files = files.slice(0,9990);
-
   console.info("Splitting into " + THREAD_COUNT + " chunks for moar parallelism.");
   chunks = utils.group(files, THREAD_COUNT);
   lengths = chunks.map(function(e) {
@@ -28,8 +25,8 @@ function Parser() {
 
   console.info("With lengths:" + lengths + "\n\n");
 
-  var scrubPromise = db.scrub();
-  console.info(scrubPromise);
+  this.db = new DB();
+  var scrubPromise = this.db.scrub();
 
   this.workerFarm = require('worker-farm');
   this.workers = this.workerFarm(require.resolve('./parserWorker'));
@@ -46,16 +43,14 @@ Parser.prototype.runWorkers = function() {
   }
 };
 
-
 Parser.prototype.handleWorkerDone = function(err, workerCounts, workerResult) {
   this.summarize(workerCounts);
   if (++this.returnedWorkers == THREAD_COUNT) {
     this.workerFarm.end(this.workers);
     this.report();
-    db.close();
+    this.db.close();
   }
 };
-
 
 Parser.prototype.summarize = function(workerCounts) {
   Object.keys(workerCounts).map(function(key) {
@@ -66,7 +61,6 @@ Parser.prototype.summarize = function(workerCounts) {
     }
   }.bind(this));
 };
-
 
 Parser.prototype.report = function() {
   console.info(this.counts);
