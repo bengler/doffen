@@ -2,8 +2,8 @@ var prettyjson = require('prettyjson');
 var clear = require('clear');
 var parser = require('xml2json');
 var fs = require('fs');
+var _ = require("lodash");
 var DB = require("./dbConnection");
-
 
 function ParserWorker(files, options, callback) {
   console.info("Spun up worker #" + options.workerNr);
@@ -49,9 +49,13 @@ ParserWorker.prototype.handleFileRead = function(err, data) {
   this.currentReads -= 1;
   json = this.parse(data);
 
+  for (var key in json) break;
+  _.extend(json, json[key]);
+  json.documentType = key;
+  delete json[key];
+
   this.db.insert(json);
 
-  for (var key in json) break;
   this.counts[key] = (typeof this.counts[key] === 'undefined' ? 1 : this.counts[key] += 1);
 
   // this.logSample();

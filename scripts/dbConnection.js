@@ -30,9 +30,17 @@ DbConnection.prototype.init = function(options) {
   });
 };
 
+DbConnection.prototype.createIndexes = function() {
+  this.connectionPromise.then(function (conn) {
+    r.db(DB_NAME).table(DB_TABLE_NAME).indexCreate('documentType').run(conn, this.handleError);
+  }.bind(this));
+};
+
+
 DbConnection.prototype.consoleLog = function(str) {
   console.log(DB_LOG_PREAMBLE + str);
 };
+
 
 DbConnection.prototype.close = function(callback) {
   this.connectionPromise.then(function (conn) {
@@ -40,6 +48,7 @@ DbConnection.prototype.close = function(callback) {
     conn.close(callback);
   }.bind(this));
 };
+
 
 DbConnection.prototype.scrub = function() {
   return new Promise(function (resolve, reject) {
@@ -68,6 +77,7 @@ DbConnection.prototype.flush = function() {
 
   }.bind(this));
 };
+
 
 DbConnection.prototype.insert = function(json) {
   this.queue.push(json);
